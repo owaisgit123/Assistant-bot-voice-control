@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blue Assistant 3D - Yeni Versiyon</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.birds.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+  <!-- Ana arka plan animasyonu için konteyner -->
+  <div id="background-animation"></div>
+  
+  <!-- Asistan arayüzü -->
+  <div class="assistant-interface">
+    <!-- Asistan görsel elemanı -->
+    <div class="assistant-visual">
+      <div class="pulse-ring"></div>
+      <div class="central-orb"></div>
+      <div class="sound-visualizer">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+      </div>
+    </div>
+    
+    <!-- Metin gösterim alanı -->
+    <div class="response-container">
+      <div class="typing-indicator">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+      <div class="response-text" id="responseText"></div>
+    </div>
+    
+    <!-- Arama sonuçları -->
+    <div class="search-results-panel" id="searchResults"></div>
+  </div>
+  
+  <!-- Kullanıcı girişi bölümü -->
+  <div class="user-input-section">
+    <div class="input-container">
+      <input type="text" id="textInput" placeholder="Search ">
+      <button class="voice-button" id="voiceButton">
+        <i class="fas fa-microphone"></i>
+      </button>
+      <button class="send-button" id="sendButton">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+    <div class="status-indicator" id="statusIndicator">...</div>
+  </div>
+
+  <script>
+    // DOM Elemanlarını seç
+const textInput = document.getElementById('textInput');
+const voiceButton = document.getElementById('voiceButton');
+const sendButton = document.getElementById('sendButton');
+const responseText = document.getElementById('responseText');
+const statusIndicator = document.getElementById('statusIndicator');
+
+// Konuşma fonksiyonu
+function speak(text) {
+    const textSpeak = new SpeechSynthesisUtterance(text);
+    textSpeak.rate = 1;
+    textSpeak.volume = 1;
+    textSpeak.pitch = 1;
+    
+    window.speechSynthesis.speak(textSpeak);
+    
+    // Konuşma sırasında animasyonları aktifleştir
+    document.querySelector('.central-orb').style.boxShadow = '0 0 40px #0077ff';
+    document.querySelector('.pulse-ring').style.border = '5px solid #0077ff';
+    
+    // Yanıt metnini göster
+    responseText.textContent = text;
+    responseText.style.animation = 'none';
+    responseText.offsetHeight; // Reflow tetikle
+    responseText.style.animation = 'fadeInOut 4s ease-in-out';
+    
+    // Konuşma bittiğinde animasyonları normale döndür
+    textSpeak.onend = () => {
+        document.querySelector('.central-orb').style.boxShadow = '0 0 30px #0077ff';
+        document.querySelector('.pulse-ring').style.border = '5px solid #0077ff';
+    };
+}
+
+// Zaman dilimine göre selamlama fonksiyonu
+function wishMe() {
+    const day = new Date();
+    const hour = day.getHours();
+    
+    if (hour >= 0 && hour < 12) {
+        speak("Muhammad Owais made By Mr Owais");
+    } else if (hour >= 12 && hour < 17) {
+        speak("Muhammad Owais made By Mr Owais");
+    } else {
+        speak("Muhammad Owais made By Mr Owais");
+    }
+}
+
+// Sayfa yüklendiğinde çalışacak fonksiyon
+window.addEventListener('load', () => {
+    // Arka plan animasyonunu başlat
+    VANTA.BIRDS({
+        el: "#background-animation",
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.0,
+        minWidth: 200.0,
+        scale: 1.0,
+        scaleMobile: 1.0,
+        backgroundColor: 0x000000,
+        color1: 0x0077ff,
+        color2: 0x00aaff,
+        colorMode: "variance",
+        birdSize: 1.5,
+        wingSpan: 20.0,
+        speedLimit: 5.0,
+        separation: 30.0,
+        alignment: 30.0,
+        cohesion: 30.0
+    });
+    
+    // Karşılama mesajı
+    setTimeout(() => {
+        speak("OIS Asistan ");
+        wishMe();
+    }, 1000);
+});
+
+// Konuşma tanıma işlemi
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = 'tr-TR'; // Türkçe dil desteği ekle
+
+recognition.onstart = () => {
+    statusIndicator.textContent = "muhammad owais";
+    statusIndicator.classList.add('active');
+    
+    // Dinleme animasyonları
+    document.querySelector('.central-orb').style.backgroundColor = '#00aaff';
+    document.querySelector('.pulse-ring').style.borderColor = '#00aaff';
+    document.querySelector('.pulse-ring').style.boxShadow = '0 0 50px #00aaff';
+};
+
+recognition.onend = () => {
+    statusIndicator.classList.remove('active');
+    
+    // Normal duruma dön
+    document.querySelector('.central-orb').style.backgroundColor = '';
+    document.querySelector('.pulse-ring').style.borderColor = '#0077ff';
+    document.querySelector('.pulse-ring').style.boxShadow = '0 0 50px #0077ff';
+};
+
+recognition.onresult = (event) => {
+    const currentIndex = event.resultIndex;
+    const transcript = event.results[currentIndex][0].transcript;
+    textInput.value = transcript;
+    
+    processCommand(transcript.toLowerCase());
+};
+
+// Ses butonu için event listener
+voiceButton.addEventListener('click', () => {
+    recognition.start();
+});
+
+// Gönder butonu için event listener
+sendButton.addEventListener('click', () => {
+    const message = textInput.value.trim();
+    if (message) {
+        processCommand(message.toLowerCase());
+        textInput.value = '';
+    }
+});
+
+// Enter tuşu için event listener
+textInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const message = textInput.value.trim();
+        if (message) {
+            processCommand(message.toLowerCase());
+            textInput.value = '';
+        }
+    }
+});
+
+// Komut işleme fonksiyonu
+function processCommand(message) {
+    // Arama sonuçları panelini temizle
+    document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('searchResults').style.animation = 'none';
+    
+    // Komutları işle
+    if (message.includes('merhaba') || message.includes('selam')) {
+        speak("Merhaba, size nasıl yardımcı olabilirim?");
+    }
+    else if (message.includes("google aç") || message.includes("google'ı aç")) {
+        window.open("https://google.com", "_blank");
+        speak("Google açılıyor...");
+    }
+    else if (message.includes("youtube aç") || message.includes("youtube'u aç")) {
+        window.open("https://youtube.com", "_blank");
+        speak("YouTube açılıyor...");
+    }
+    else if (message.includes("facebook aç") || message.includes("facebook'u aç")) {
+        window.open("https://facebook.com", "_blank");
+        speak("Facebook açılıyor...");
+    }
+    else if (message.includes('nedir') || message.includes('kimdir') || message.includes('ne demek')) {
+        window.open(`https://www.google.com/search?q=${message.replace(" ", "+")}`, "_blank");
+        const finalText = "İnternette " + message + " hakkında bulduklarım";
+        speak(finalText);
+    }
+    else if (message.includes('vikipedi') || message.includes('wikipedia')) {
+        const searchTerm = message.replace("vikipedi", "").replace("wikipedia", "").trim();
+        window.open(`https://tr.wikipedia.org/wiki/${searchTerm.replace(/ /g, "_")}`, "_blank");
+        const finalText = "Wikipedia'da " + searchTerm + " ile ilgili bulduklarım";
+        speak(finalText);
+    }
+    else if (message.includes('saat') || message.includes('saat kaç')) {
+        const time = new Date().toLocaleString('tr-TR', {hour: "numeric", minute: "numeric"});
+        speak("Şu an saat " + time);
+    }
+    else if (message.includes('tarih') || message.includes('bugün günlerden ne')) {
+        const date = new Date().toLocaleString('tr-TR', {weekday: "long", year: "numeric", month: "long", day: "numeric"});
+        speak("Bugün " + date);
+    }
+    else if (message.includes('hesap makinesi') || message.includes('hesap makinası')) {
+        window.open('Calculator:///');
+        speak("Hesap makinesi açılıyor");
+    }
+    else if (message.includes('hava durumu') || message.includes('hava nasıl')) {
+        window.open(`https://www.google.com/search?q=hava+durumu`, "_blank");
+        speak("Hava durumu bilgisi getiriliyor");
+    }
+    else if (message.includes('teşekkür') || message.includes('teşekkürler')) {
+        speak("Rica ederim, başka bir konuda yardım edebilir miyim?");
+    }
+    else if (message.includes('görüşürüz') || message.includes('hoşça kal')) {
+        speak("Görüşmek üzere, iyi günler!");
+    }
+    else {
+        window.open(`https://www.google.com/search?q=${message.replace(/ /g, "+")}`, "_blank");
+        const finalText = message + " için internette bilgi buldum";
+        speak(finalText);
+    }
+    
+    // Ses dalgası animasyonunu etkinleştir
+    document.querySelectorAll('.sound-visualizer .bar').forEach(bar => {
+        bar.style.animation = 'none';
+        bar.offsetHeight; // Reflow tetikle
+        bar.style.animation = 'sound-wave 1.2s ease-in-out infinite';
+    });
+}            
+  </script>
+  <style>
+    * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #000;
+  color: #fff;
+  font-family: 'Arial', sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#background-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.assistant-interface {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  perspective: 1000px;
+}
+
+.assistant-visual {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: float 6s ease-in-out infinite;
+  transition: all 0.5s ease;
+  margin: 0 auto;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 5px solid #0077ff;
+  box-shadow: 0 0 50px #0077ff;
+  animation: pulse 2s linear infinite;
+  transition: all 0.5s ease;
+}
+
+.central-orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle at center, #0077ff, #0055cc);
+  border-radius: 50%;
+  box-shadow: 0 0 30px #0077ff;
+  transition: all 0.5s ease;
+}
+
+.sound-visualizer {
+  position: absolute;
+  bottom: -30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.sound-visualizer .bar {
+  width: 4px;
+  height: 20px;
+  background-color: #0077ff;
+  border-radius: 2px;
+  animation: sound-wave 1.2s ease-in-out infinite;
+}
+
+.sound-visualizer .bar:nth-child(1) { animation-delay: 0s; }
+.sound-visualizer .bar:nth-child(2) { animation-delay: 0.2s; }
+.sound-visualizer .bar:nth-child(3) { animation-delay: 0.4s; }
+.sound-visualizer .bar:nth-child(4) { animation-delay: 0.6s; }
+.sound-visualizer .bar:nth-child(5) { animation-delay: 0.8s; }
+
+@keyframes sound-wave {
+  0%, 100% { height: 5px; }
+  50% { height: 20px; }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotateX(0) rotateY(0);
+  }
+  50% {
+    transform: translateY(-20px) rotateX(10deg) rotateY(20deg);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+.response-container {
+  margin-top: 60px;
+  width: 300px;
+  text-align: center;
+  position: relative;
+}
+
+.typing-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.typing-indicator .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #0077ff;
+  margin: 0 3px;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator .dot:nth-child(1) { animation-delay: 0s; }
+.typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% { 
+    transform: scale(1.5);
+    opacity: 1;
+  }
+}
+
+.response-text {
+  color: #fff;
+  font-size: 16px;
+  opacity: 0;
+  animation: fadeInOut 4s ease-in-out;
+}
+
+.search-results-panel {
+  position: absolute;
+  top: 120%;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 80vw;
+  max-width: 600px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 119, 255, 0.3);
+  animation: search-appear 0.5s forwards;
+  transform-origin: top center;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+@keyframes search-appear {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8) rotateX(-30deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) rotateX(0deg);
+  }
+}
+
+.user-input-section {
+  position: absolute;
+  bottom: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 500px;
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  padding: 10px 20px;
+  border: 1px solid rgba(0, 119, 255, 0.3);
+}
+
+#textInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 16px;
+  padding: 10px 0;
+}
+
+#textInput::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.voice-button, .send-button {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #0077ff;
+  font-size: 18px;
+}
+
+.voice-button:hover, .send-button:hover {
+  transform: scale(1.1);
+}
+
+.status-indicator {
+  text-align: center;
+  color: #0077ff;
+  margin-top: 10px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.status-indicator.active {
+  opacity: 1;
+}
+
+@keyframes ripple {
+  0% {
+    width: 0px;
+    height: 0px;
+    opacity: 1;
+  }
+  100% {
+    width: 300px;
+    height: 300px;
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}                                         
+            
+  </style>
+</body>
+</html>            
